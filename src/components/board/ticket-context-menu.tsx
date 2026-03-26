@@ -1420,22 +1420,47 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
                               <Pencil className="h-4 w-4 text-amber-400 shrink-0" />
                               <input
                                 ref={customPointsInputRef}
-                                type="number"
-                                min="0"
-                                max="99"
-                                step="1"
+                                type="text"
+                                inputMode="numeric"
                                 placeholder="Points"
                                 value={customPointsValue}
-                                onChange={(e) => setCustomPointsValue(e.target.value)}
+                                onChange={(e) => {
+                                  const raw = e.target.value.replace(/[^0-9]/g, '')
+                                  if (raw === '') {
+                                    setCustomPointsValue('')
+                                  } else {
+                                    const clamped = Math.min(
+                                      99,
+                                      Math.max(0, Number.parseInt(raw, 10)),
+                                    )
+                                    setCustomPointsValue(String(clamped))
+                                  }
+                                }}
                                 onKeyDown={(e) => {
                                   e.stopPropagation()
                                   if (e.key === 'Enter') {
                                     const val = Number.parseInt(customPointsValue, 10)
-                                    if (!Number.isNaN(val) && val >= 0 && val <= 99) {
-                                      doPoints(val)
+                                    if (!Number.isNaN(val)) {
+                                      doPoints(Math.min(99, Math.max(0, val)))
                                     }
                                     setShowCustomPoints(false)
                                     setCustomPointsValue('')
+                                  } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault()
+                                    const current = Number.parseInt(customPointsValue, 10)
+                                    setCustomPointsValue(
+                                      String(
+                                        Math.min(99, (Number.isNaN(current) ? -1 : current) + 1),
+                                      ),
+                                    )
+                                  } else if (e.key === 'ArrowDown') {
+                                    e.preventDefault()
+                                    const current = Number.parseInt(customPointsValue, 10)
+                                    setCustomPointsValue(
+                                      String(
+                                        Math.max(0, (Number.isNaN(current) ? 1 : current) - 1),
+                                      ),
+                                    )
                                   } else if (e.key === 'Escape') {
                                     setShowCustomPoints(false)
                                     setCustomPointsValue('')
@@ -1443,13 +1468,13 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
                                 }}
                                 onBlur={() => {
                                   const val = Number.parseInt(customPointsValue, 10)
-                                  if (!Number.isNaN(val) && val >= 0 && val <= 99) {
-                                    doPoints(val)
+                                  if (!Number.isNaN(val)) {
+                                    doPoints(Math.min(99, Math.max(0, val)))
                                   }
                                   setShowCustomPoints(false)
                                   setCustomPointsValue('')
                                 }}
-                                className="w-20 rounded bg-zinc-800 border border-zinc-600 px-2 py-1 text-sm text-zinc-100 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                className="w-20 rounded bg-zinc-800 border border-zinc-600 px-2 py-1 text-sm text-zinc-100 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40"
                               />
                             </div>
                           ) : (
