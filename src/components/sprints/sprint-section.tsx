@@ -321,7 +321,7 @@ export function SprintSection({
           style={{ backgroundColor: 'var(--table-header-bg, rgb(9 9 11))' }}
         >
           <div className="flex flex-wrap items-center gap-3">
-            {/* Identity row: chevron + icon + name + dates + time + goal.
+            {/* Identity row: checkbox + chevron + icon + name + dates + time + goal.
                 grow + shrink-0 = takes remaining space but won't compress.
                 When stats don't fit, flex-wrap moves them to next row and
                 identity stretches to full width with justify-between. */}

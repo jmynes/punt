@@ -113,6 +113,8 @@ export interface TicketTableHeaderProps {
   enableColumnReorder?: boolean
   /** Callback to hide a column */
   onHideColumn?: (columnId: string) => void
+  /** All ticket IDs in this table section (for select-all) */
+  allTicketIds?: string[]
 }
 
 /**
