@@ -201,6 +201,25 @@ export async function deleteTicket(projectKey: string, ticketId: string) {
   return apiRequest<void>('DELETE', `/api/projects/${projectKey}/tickets/${ticketId}`)
 }
 
+export interface MoveTicketToProjectResponse {
+  success: boolean
+  ticket: TicketData
+  sourceProjectId: string
+  targetProjectId: string
+}
+
+export async function moveTicketToProject(
+  projectKey: string,
+  ticketId: string,
+  targetProjectKey: string,
+) {
+  return apiRequest<MoveTicketToProjectResponse>(
+    'POST',
+    `/api/projects/${projectKey}/tickets/${ticketId}/move`,
+    { targetProjectId: targetProjectKey },
+  )
+}
+
 // ============================================================================
 // Projects API
 // ============================================================================
