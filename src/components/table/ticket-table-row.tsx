@@ -126,14 +126,14 @@ export function TicketTableRow({
         <tbody>
           <tr className="select-none">
             {/* Checkbox cell (placeholder in overlay) */}
-            <td className="w-8 px-1 py-2">
+            <td className="w-10 pl-3.5 pr-0.5 py-2">
               <div className="flex h-6 w-6 items-center justify-center">
                 <div className="h-4 w-4 rounded-[4px] border border-amber-500 bg-amber-500 flex items-center justify-center">
                   <CheckIcon className="h-3 w-3 text-white" />
                 </div>
               </div>
             </td>
-            <td className="w-8 px-1 py-2">
+            <td className="w-10 pl-3.5 pr-0.5 py-2">
               <div className="flex h-6 w-6 items-center justify-center">
                 <GripVertical className="h-4 w-4 text-zinc-500" />
               </div>
@@ -183,7 +183,7 @@ export function TicketTableRow({
           onKeyDown={handleKeyDown}
         >
           {/* Selection checkbox */}
-          <td className="w-8 px-1 py-2">
+          <td className="w-10 pl-3.5 pr-0.5 py-2">
             <div
               className={cn(
                 'flex h-6 w-6 items-center justify-center',
@@ -211,7 +211,7 @@ export function TicketTableRow({
           </td>
 
           {/* Drag handle */}
-          <td className="w-8 px-1 py-2">
+          <td className="w-10 pl-3.5 pr-0.5 py-2">
             {!reorderDisabled && (
               <div className="flex h-6 w-6 items-center justify-center rounded opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity pointer-events-none">
                 <GripVertical className="h-4 w-4 text-zinc-500" />

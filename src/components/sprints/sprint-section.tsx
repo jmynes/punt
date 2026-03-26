@@ -5,12 +5,10 @@ import {
   AlertTriangle,
   CalendarDays,
   CheckCircle2,
-  CheckIcon,
   ChevronDown,
   ChevronRight,
   Clock,
   Flame,
-  MinusIcon,
   Pencil,
   Play,
   Plus,
@@ -115,36 +113,7 @@ export function SprintSection({
   const { sort, toggleSort, setSort, toggleColumnVisibility } = useBacklogStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
   const reopenSprintMutation = useReopenSprint(projectId)
-  const { selectedTicketIds, addToSelection } = useSelectionStore()
-
-  // Select-all for this section
-  const sectionTicketIds = useMemo(() => tickets.map((t) => t.id), [tickets])
-  const allSectionSelected =
-    sectionTicketIds.length > 0 && sectionTicketIds.every((id) => selectedTicketIds.has(id))
-  const someSectionSelected =
-    sectionTicketIds.some((id) => selectedTicketIds.has(id)) && !allSectionSelected
-
-  const handleSelectAllSection = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation()
-      if (allSectionSelected) {
-        // Deselect only this section's tickets, preserving cross-section selections.
-        // (Header-level select-all clears everything; section-level is scoped.)
-        const remaining = new Set(selectedTicketIds)
-        for (const id of sectionTicketIds) {
-          remaining.delete(id)
-        }
-        // Atomic update to avoid flash from clearing then re-adding
-        useSelectionStore.setState({
-          selectedTicketIds: remaining,
-          ...(remaining.size === 0 ? { lastSelectedId: null, ticketOrigins: new Map() } : {}),
-        })
-      } else {
-        addToSelection(sectionTicketIds)
-      }
-    },
-    [allSectionSelected, sectionTicketIds, selectedTicketIds, addToSelection],
-  )
+  const { selectedTicketIds } = useSelectionStore()
 
   // Sort tickets locally using the shared sort utility
   const sortedTickets = useMemo(
@@ -306,28 +275,8 @@ export function SprintSection({
                 When stats don't fit, flex-wrap moves them to next row and
                 identity stretches to full width with justify-between. */}
             <div className="flex items-center gap-3 grow shrink-0 justify-between">
-              {/* Select-all checkbox + Chevron + icon + name grouped together */}
+              {/* Chevron + icon + name grouped together */}
               <div className="flex items-center gap-3 min-w-0">
-                {/* Select all checkbox for this section */}
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={allSectionSelected ? true : someSectionSelected ? 'mixed' : false}
-                  aria-label={`Select all tickets in ${sprint ? sprint.name : 'backlog'}`}
-                  onClick={handleSelectAllSection}
-                  className={cn(
-                    'h-4 w-4 rounded-[4px] border flex items-center justify-center shrink-0 transition-colors',
-                    allSectionSelected
-                      ? 'border-amber-500 bg-amber-500 text-white'
-                      : someSectionSelected
-                        ? 'border-amber-500 bg-amber-500/30 text-amber-400'
-                        : 'border-zinc-600 bg-transparent hover:border-zinc-400',
-                  )}
-                >
-                  {allSectionSelected && <CheckIcon className="h-3 w-3" />}
-                  {someSectionSelected && !allSectionSelected && <MinusIcon className="h-3 w-3" />}
-                </button>
-
                 {/* Expand/Collapse chevron (only when collapsible) */}
                 {collapsible && (
                   <button

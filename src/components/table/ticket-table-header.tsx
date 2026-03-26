@@ -362,7 +362,7 @@ export function TicketTableHeader({
     >
       <tr className="border-b border-zinc-800">
         {/* Select all checkbox */}
-        <th className="w-8 px-1 py-2">
+        <th className="w-10 pl-3.5 pr-0.5 py-2">
           <div className="flex h-6 w-6 items-center justify-center">
             <button
               type="button"
