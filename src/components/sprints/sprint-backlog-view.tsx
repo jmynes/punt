@@ -72,7 +72,7 @@ export function SprintBacklogView({
   const { selectedTicketIds, clearSelection } = useSelectionStore()
   const {
     columns: backlogColumns,
-    sort,
+    sort: globalSort,
     queryMode,
     setQueryMode,
     queryText,
@@ -80,18 +80,27 @@ export function SprintBacklogView({
   } = useBacklogStore()
   const visibleColumns = backlogColumns.filter((c) => c.visible)
   const persistTableSort = useSettingsStore((s) => s.persistTableSort)
-  const clearAllSprintSorts = useSprintStore((s) => s.clearAllSprintSorts)
+  const unifiedSort = useSettingsStore((s) => s.unifiedSort)
+  const { clearAllSprintSorts, getSprintSort } = useSprintStore()
 
-  // Clear sprint sorts on mount when sort persistence is disabled
+  // Helper to get the effective sort for a section
+  const getSectionSort = useCallback(
+    (sectionId: string) => {
+      if (unifiedSort) return globalSort
+      return getSprintSort(sectionId)
+    },
+    [unifiedSort, globalSort, getSprintSort],
+  )
+
+  // Clear sprint sorts after hydration when sort persistence is disabled
+  const sprintHydrated = useSprintStore((s) => s._hasHydrated)
   const sortResetRef = useRef(false)
   useEffect(() => {
-    if (!sortResetRef.current) {
+    if (!sortResetRef.current && sprintHydrated && !persistTableSort) {
       sortResetRef.current = true
-      if (!persistTableSort) {
-        clearAllSprintSorts()
-      }
+      clearAllSprintSorts()
     }
-  }, [persistTableSort, clearAllSprintSorts])
+  }, [sprintHydrated, persistTableSort, clearAllSprintSorts])
 
   // Extract dynamic values for query autocomplete
   const dynamicValues = useMemo(() => {
@@ -299,8 +308,9 @@ export function SprintBacklogView({
         return
       }
 
-      // When sort is active, positional reorder is meaningless
-      if (sort !== null) {
+      // When sort is active for the target section, positional reorder is meaningless
+      const targetSort = getSectionSort(targetSectionId)
+      if (targetSort !== null) {
         const sourceSectionKey = activeTicket?.sprintId ?? 'backlog'
         if (targetSectionId === sourceSectionKey) {
           // Same-section: suppress indicator entirely
@@ -337,7 +347,7 @@ export function SprintBacklogView({
         insertIndex,
       })
     },
-    [ticketsBySprint, sort, activeTicket],
+    [ticketsBySprint, getSectionSort, activeTicket],
   )
 
   // Handle drag end
@@ -387,7 +397,9 @@ export function SprintBacklogView({
         ticketsChangingSprint.length === 0 &&
         (overData?.type === 'ticket' || overData?.type === 'section-end')
       ) {
-        if (sort !== null) {
+        const sourceSectionKey = ticketsToMove[0]?.sprintId ?? 'backlog'
+        const sectionSort = getSectionSort(sourceSectionKey)
+        if (sectionSort !== null) {
           showToast.info('Clear column sort to reorder manually', {
             description: 'Click the sorted column header to remove sorting',
           })
@@ -602,7 +614,7 @@ export function SprintBacklogView({
       ticketsBySprint,
       dropPosition,
       clearSelection,
-      sort,
+      getSectionSort,
     ],
   )
 
