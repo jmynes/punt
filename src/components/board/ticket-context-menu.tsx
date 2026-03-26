@@ -137,6 +137,9 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
   const [pendingDelete, setPendingDelete] = useState<TicketWithRelations[]>([])
   const [showMoveToProject, setShowMoveToProject] = useState(false)
   const [showLinkDialog, setShowLinkDialog] = useState(false)
+  const [showCustomPoints, setShowCustomPoints] = useState(false)
+  const [customPointsValue, setCustomPointsValue] = useState('')
+  const customPointsInputRef = useRef<HTMLInputElement | null>(null)
   // Track if component has mounted to avoid hydration mismatch
   const [isMounted, setIsMounted] = useState(false)
 
@@ -1029,6 +1032,11 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
         id,
         anchor: { x: rect.right, y: rect.top, height: rect.height, left: rect.left },
       })
+      // Reset inline custom points input when switching submenus
+      if (id !== 'points') {
+        setShowCustomPoints(false)
+        setCustomPointsValue('')
+      }
     }
 
   const closeSubmenu = () => setSubmenu(null)
@@ -1407,18 +1415,88 @@ export function TicketContextMenu({ ticket, children, view = 'list' }: MenuProps
                       {!multi && (
                         <>
                           <div className="my-1 border-t border-zinc-800" />
-                          <button
-                            type="button"
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
-                            onClick={() => {
-                              uiStore.openTicketWithFocus(ticket.id, 'storyPoints')
-                              setOpen(false)
-                              setSubmenu(null)
-                            }}
-                          >
-                            <Pencil className="h-4 w-4 text-amber-400" />
-                            <span>Custom...</span>
-                          </button>
+                          {showCustomPoints ? (
+                            <div className="flex items-center gap-2 px-3 py-1.5">
+                              <Pencil className="h-4 w-4 text-amber-400 shrink-0" />
+                              <input
+                                ref={customPointsInputRef}
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="Points"
+                                value={customPointsValue}
+                                onChange={(e) => {
+                                  const raw = e.target.value.replace(/[^0-9]/g, '')
+                                  if (raw === '') {
+                                    setCustomPointsValue('')
+                                  } else {
+                                    const clamped = Math.min(
+                                      99,
+                                      Math.max(0, Number.parseInt(raw, 10)),
+                                    )
+                                    setCustomPointsValue(String(clamped))
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  e.stopPropagation()
+                                  if (e.key === 'Enter') {
+                                    const val = Number.parseInt(customPointsValue, 10)
+                                    if (!Number.isNaN(val)) {
+                                      doPoints(Math.min(99, Math.max(0, val)))
+                                    }
+                                    setShowCustomPoints(false)
+                                    setCustomPointsValue('')
+                                  } else if (e.key === 'ArrowUp') {
+                                    e.preventDefault()
+                                    const current = Number.parseInt(customPointsValue, 10)
+                                    setCustomPointsValue(
+                                      String(
+                                        Math.min(99, (Number.isNaN(current) ? -1 : current) + 1),
+                                      ),
+                                    )
+                                  } else if (e.key === 'ArrowDown') {
+                                    e.preventDefault()
+                                    const current = Number.parseInt(customPointsValue, 10)
+                                    setCustomPointsValue(
+                                      String(
+                                        Math.max(0, (Number.isNaN(current) ? 1 : current) - 1),
+                                      ),
+                                    )
+                                  } else if (e.key === 'Escape') {
+                                    setShowCustomPoints(false)
+                                    setCustomPointsValue('')
+                                  }
+                                }}
+                                onBlur={() => {
+                                  const val = Number.parseInt(customPointsValue, 10)
+                                  if (!Number.isNaN(val)) {
+                                    doPoints(Math.min(99, Math.max(0, val)))
+                                  }
+                                  setShowCustomPoints(false)
+                                  setCustomPointsValue('')
+                                }}
+                                className="w-20 rounded bg-zinc-800 border border-zinc-600 px-2 py-1 text-sm text-zinc-100 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40"
+                              />
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-zinc-800"
+                              onClick={() => {
+                                setShowCustomPoints(true)
+                                setCustomPointsValue(
+                                  ticket.storyPoints != null ? String(ticket.storyPoints) : '',
+                                )
+                                // Focus the input after it renders
+                                requestAnimationFrame(() => {
+                                  customPointsInputRef.current?.focus()
+                                  customPointsInputRef.current?.select()
+                                })
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 text-amber-400" />
+                              <span>Custom...</span>
+                            </button>
+                          )}
                         </>
                       )}
                       <div className="my-1 border-t border-zinc-800" />
