@@ -16,7 +16,7 @@ importers:
         version: 0.80.0(zod@4.3.6)
       '@auth/prisma-adapter':
         specifier: ^2.11.1
-        version: 2.11.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(nodemailer@7.0.13)
+        version: 2.11.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@6.0.2))(typescript@6.0.2))(nodemailer@7.0.13)
       '@codemirror/commands':
         specifier: ^6.10.3
         version: 6.10.3
@@ -61,7 +61,7 @@ importers:
         version: 1.2.4(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@prisma/client':
         specifier: ^6.19.2
-        version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
+        version: 6.19.2(prisma@6.19.2(typescript@6.0.2))(typescript@6.0.2)
       '@react-email/components':
         specifier: ^1.0.10
         version: 1.0.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -133,7 +133,7 @@ importers:
         version: 13.4.0
       prisma:
         specifier: ^6.19.2
-        version: 6.19.2(typescript@5.9.3)
+        version: 6.19.2(typescript@6.0.2)
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -236,7 +236,7 @@ importers:
         version: 16.4.0
       msw:
         specifier: ^2.12.14
-        version: 2.12.14(@types/node@25.5.0)(typescript@5.9.3)
+        version: 2.12.14(@types/node@25.5.0)(typescript@6.0.2)
       pngjs:
         specifier: ^7.0.0
         version: 7.0.0
@@ -253,11 +253,11 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       typescript:
-        specifier: ^5
-        version: 5.9.3
+        specifier: ^6
+        version: 6.0.2
       vitest:
         specifier: ^4.1.2
-        version: 4.1.2(@types/node@25.5.0)(@vitest/ui@4.1.1)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.0)(typescript@5.9.3))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))
+        version: 4.1.2(@types/node@25.5.0)(@vitest/ui@4.1.1)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.0)(typescript@6.0.2))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))
 
   mcp:
     dependencies:
@@ -278,8 +278,8 @@ importers:
         specifier: ^4.19.0
         version: 4.21.0
       typescript:
-        specifier: ^5.0.0
-        version: 5.9.3
+        specifier: ^6.0.2
+        version: 6.0.2
 
 packages:
 
@@ -4976,8 +4976,8 @@ packages:
   type@2.7.3:
     resolution: {integrity: sha512-8j+1QmAbPvLZow5Qpi6NCaN8FB60p/6x8/vfNqOk/hC+HuvFZhL4+WfekuhQLiqFZXOgQdrs3B+XxEmCc6b3FQ==}
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
+  typescript@6.0.2:
+    resolution: {integrity: sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -5317,10 +5317,10 @@ snapshots:
     optionalDependencies:
       nodemailer: 7.0.13
 
-  '@auth/prisma-adapter@2.11.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))(nodemailer@7.0.13)':
+  '@auth/prisma-adapter@2.11.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@6.0.2))(typescript@6.0.2))(nodemailer@7.0.13)':
     dependencies:
       '@auth/core': 0.41.1(nodemailer@7.0.13)
-      '@prisma/client': 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
+      '@prisma/client': 6.19.2(prisma@6.19.2(typescript@6.0.2))(typescript@6.0.2)
     transitivePeerDependencies:
       - '@simplewebauthn/browser'
       - '@simplewebauthn/server'
@@ -6670,10 +6670,10 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)':
+  '@prisma/client@6.19.2(prisma@6.19.2(typescript@6.0.2))(typescript@6.0.2)':
     optionalDependencies:
-      prisma: 6.19.2(typescript@5.9.3)
-      typescript: 5.9.3
+      prisma: 6.19.2(typescript@6.0.2)
+      typescript: 6.0.2
 
   '@prisma/config@6.19.2':
     dependencies:
@@ -8190,7 +8190,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.2(@types/node@25.5.0)(@vitest/ui@4.1.1)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.0)(typescript@5.9.3))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))
+      vitest: 4.1.2(@types/node@25.5.0)(@vitest/ui@4.1.1)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.0)(typescript@6.0.2))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))
 
   '@vitest/expect@4.1.2':
     dependencies:
@@ -8201,13 +8201,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.2(msw@2.12.14(@types/node@25.5.0)(typescript@5.9.3))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))':
+  '@vitest/mocker@4.1.2(msw@2.12.14(@types/node@25.5.0)(typescript@6.0.2))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
       '@vitest/spy': 4.1.2
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      msw: 2.12.14(@types/node@25.5.0)(typescript@5.9.3)
+      msw: 2.12.14(@types/node@25.5.0)(typescript@6.0.2)
       vite: 7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2)
 
   '@vitest/pretty-format@4.1.1':
@@ -8241,7 +8241,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vitest: 4.1.2(@types/node@25.5.0)(@vitest/ui@4.1.1)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.0)(typescript@5.9.3))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))
+      vitest: 4.1.2(@types/node@25.5.0)(@vitest/ui@4.1.1)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.0)(typescript@6.0.2))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))
 
   '@vitest/utils@4.1.1':
     dependencies:
@@ -9689,7 +9689,7 @@ snapshots:
 
   ms@2.1.3: {}
 
-  msw@2.12.14(@types/node@25.5.0)(typescript@5.9.3):
+  msw@2.12.14(@types/node@25.5.0)(typescript@6.0.2):
     dependencies:
       '@inquirer/confirm': 5.1.21(@types/node@25.5.0)
       '@mswjs/interceptors': 0.41.3
@@ -9710,7 +9710,7 @@ snapshots:
       until-async: 3.0.2
       yargs: 17.7.2
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 6.0.2
     transitivePeerDependencies:
       - '@types/node'
 
@@ -9912,12 +9912,12 @@ snapshots:
       ansi-styles: 5.2.0
       react-is: 17.0.2
 
-  prisma@6.19.2(typescript@5.9.3):
+  prisma@6.19.2(typescript@6.0.2):
     dependencies:
       '@prisma/config': 6.19.2
       '@prisma/engines': 6.19.2
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 6.0.2
     transitivePeerDependencies:
       - magicast
 
@@ -10536,7 +10536,7 @@ snapshots:
 
   type@2.7.3: {}
 
-  typescript@5.9.3: {}
+  typescript@6.0.2: {}
 
   uint8array-extras@1.5.0: {}
 
@@ -10651,10 +10651,10 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.8.2
 
-  vitest@4.1.2(@types/node@25.5.0)(@vitest/ui@4.1.1)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.0)(typescript@5.9.3))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2)):
+  vitest@4.1.2(@types/node@25.5.0)(@vitest/ui@4.1.1)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.14(@types/node@25.5.0)(typescript@6.0.2))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2)):
     dependencies:
       '@vitest/expect': 4.1.2
-      '@vitest/mocker': 4.1.2(msw@2.12.14(@types/node@25.5.0)(typescript@5.9.3))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))
+      '@vitest/mocker': 4.1.2(msw@2.12.14(@types/node@25.5.0)(typescript@6.0.2))(vite@7.2.6(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))
       '@vitest/pretty-format': 4.1.2
       '@vitest/runner': 4.1.2
       '@vitest/snapshot': 4.1.2
