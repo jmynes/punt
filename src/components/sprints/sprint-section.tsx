@@ -29,7 +29,9 @@ import { PERMISSIONS } from '@/lib/permissions'
 import { formatDaysRemaining, isCompletedColumn, isSprintExpired } from '@/lib/sprint-utils'
 import { sortTickets } from '@/lib/ticket-sort'
 import { cn } from '@/lib/utils'
-import { useBacklogStore } from '@/stores/backlog-store'
+import { type BacklogColumnId, useBacklogStore } from '@/stores/backlog-store'
+import { useSettingsStore } from '@/stores/settings-store'
+import { useSprintStore } from '@/stores/sprint-store'
 import { useUIStore } from '@/stores/ui-store'
 import type {
   ColumnWithTickets,
@@ -109,9 +111,60 @@ export function SprintSection({
   }, [])
 
   const { setSprintCreateOpen, openSprintStart, openSprintComplete, openSprintEdit } = useUIStore()
-  const { sort, toggleSort, setSort, toggleColumnVisibility } = useBacklogStore()
+  const {
+    sort: globalSort,
+    toggleSort: globalToggleSort,
+    setSort: globalSetSort,
+    toggleColumnVisibility,
+    columns,
+  } = useBacklogStore()
+  const unifiedSort = useSettingsStore((s) => s.unifiedSort)
+  const { getSprintSort, setSprintSort } = useSprintStore()
   const canManageSprints = useHasPermission(projectId, PERMISSIONS.SPRINTS_MANAGE)
   const reopenSprintMutation = useReopenSprint(projectId)
+
+  // Section ID for per-section sort lookup
+  const sectionId = sprint?.id ?? 'backlog'
+
+  // Determine effective sort for this section
+  const sectionSort = getSprintSort(sectionId)
+  const sort = unifiedSort ? globalSort : sectionSort
+
+  // Toggle sort: when unified, update global; when independent, update per-section
+  const toggleSort = useCallback(
+    (columnId: BacklogColumnId) => {
+      if (unifiedSort) {
+        globalToggleSort(columnId)
+      } else {
+        const column = columns.find((c) => c.id === columnId)
+        if (!column?.sortable) return
+
+        const currentSort = getSprintSort(sectionId)
+        if (currentSort?.column === columnId) {
+          if (currentSort.direction === 'asc') {
+            setSprintSort(sectionId, { column: columnId, direction: 'desc' })
+          } else {
+            setSprintSort(sectionId, null)
+          }
+        } else {
+          setSprintSort(sectionId, { column: columnId, direction: 'asc' })
+        }
+      }
+    },
+    [unifiedSort, globalToggleSort, columns, getSprintSort, sectionId, setSprintSort],
+  )
+
+  // Set sort: when unified, update global; when independent, update per-section
+  const setSort = useCallback(
+    (newSort: Parameters<typeof globalSetSort>[0]) => {
+      if (unifiedSort) {
+        globalSetSort(newSort)
+      } else {
+        setSprintSort(sectionId, newSort)
+      }
+    },
+    [unifiedSort, globalSetSort, setSprintSort, sectionId],
+  )
 
   // Sort tickets locally using the shared sort utility
   const sortedTickets = useMemo(
@@ -268,7 +321,7 @@ export function SprintSection({
           style={{ backgroundColor: 'var(--table-header-bg, rgb(9 9 11))' }}
         >
           <div className="flex flex-wrap items-center gap-3">
-            {/* Identity row: chevron + icon + name + dates + time + goal.
+            {/* Identity row: checkbox + chevron + icon + name + dates + time + goal.
                 grow + shrink-0 = takes remaining space but won't compress.
                 When stats don't fit, flex-wrap moves them to next row and
                 identity stretches to full width with justify-between. */}
@@ -589,7 +642,7 @@ export function SprintSection({
           endDroppableId={`${droppableId}-end`}
           endDroppableData={{ type: 'section-end', sprintId: sprint?.id ?? null }}
           sort={sort}
-          onToggleSort={(id) => toggleSort(id as Parameters<typeof toggleSort>[0])}
+          onToggleSort={(id) => toggleSort(id as BacklogColumnId)}
           onSetSort={setSort}
           enableColumnReorder={true}
           onHideColumn={(id) =>

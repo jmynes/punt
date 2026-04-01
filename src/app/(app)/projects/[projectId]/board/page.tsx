@@ -34,7 +34,17 @@ export default function BoardPage() {
   const project = getProjectByKey(projectKey)
   const projectId = project?.id || projectKey // Use ID if found, fallback to key for API calls
 
-  const { getColumns, _hasHydrated } = useBoardStore()
+  const { getColumns, _hasHydrated, clearAllColumnSorts } = useBoardStore()
+
+  // Clear column sorts after hydration when sort persistence is disabled
+  const persistTableSort = useSettingsStore((s) => s.persistTableSort)
+  const sortResetRef = useRef(false)
+  useEffect(() => {
+    if (!sortResetRef.current && _hasHydrated && !persistTableSort) {
+      sortResetRef.current = true
+      clearAllColumnSorts()
+    }
+  }, [_hasHydrated, persistTableSort, clearAllColumnSorts])
   const {
     setActiveProjectId,
     activeTicketId,

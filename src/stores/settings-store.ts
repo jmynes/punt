@@ -82,6 +82,10 @@ interface SettingsState {
   // Default project view when clicking a project in the sidebar
   defaultProjectView: 'board' | 'backlog' | 'sprints'
   setDefaultProjectView: (value: 'board' | 'backlog' | 'sprints') => void
+
+  // Sort all sections together (unified sort) vs independently
+  unifiedSort: boolean
+  setUnifiedSort: (value: boolean) => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -193,6 +197,10 @@ export const useSettingsStore = create<SettingsState>()(
       // Default project view (board by default - current behavior)
       defaultProjectView: 'board',
       setDefaultProjectView: (value) => set({ defaultProjectView: value }),
+
+      // Sort all sections together (off by default - independent sort per section)
+      unifiedSort: false,
+      setUnifiedSort: (value) => set({ unifiedSort: value }),
     }),
     {
       name: 'punt-settings',

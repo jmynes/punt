@@ -41,6 +41,8 @@ function GeneralContent() {
     setWarnOnSimulationLeave,
     defaultProjectView,
     setDefaultProjectView,
+    unifiedSort,
+    setUnifiedSort,
   } = useSettingsStore()
 
   return (
@@ -295,6 +297,26 @@ function GeneralContent() {
                   id="persist-table-sort"
                   checked={persistTableSort}
                   onCheckedChange={(checked) => setPersistTableSort(checked === true)}
+                  className="data-[state=checked]:bg-amber-600"
+                />
+              </div>
+
+              <Separator className="bg-zinc-800" />
+
+              <div className="flex items-start justify-between space-x-4">
+                <div className="flex-1 space-y-1">
+                  <Label htmlFor="unified-sort" className="text-zinc-300">
+                    Sort all sections together
+                  </Label>
+                  <p className="text-sm text-zinc-500">
+                    When enabled, clicking a column header sorts all sprint and backlog sections at
+                    once. When disabled, each section has its own independent sort.
+                  </p>
+                </div>
+                <Switch
+                  id="unified-sort"
+                  checked={unifiedSort}
+                  onCheckedChange={(checked) => setUnifiedSort(checked === true)}
                   className="data-[state=checked]:bg-amber-600"
                 />
               </div>

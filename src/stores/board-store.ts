@@ -231,6 +231,7 @@ interface BoardState {
   columnSorts: Record<string, ColumnSortOption>
   getColumnSort: (columnId: string) => ColumnSortOption
   setColumnSort: (columnId: string, sort: ColumnSortOption) => void
+  clearAllColumnSorts: () => void
 
   // Get the next ticket number (max + 1) for a project
   getNextTicketNumber: (projectId: string) => number
@@ -377,6 +378,7 @@ export const useBoardStore = create<BoardState>()(
         set((state) => ({
           columnSorts: { ...state.columnSorts, [columnId]: sort },
         })),
+      clearAllColumnSorts: () => set({ columnSorts: {} }),
 
       // Get the next ticket number for a project
       getNextTicketNumber: (projectId: string) => {

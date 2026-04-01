@@ -48,6 +48,7 @@ import { useBoardStore } from '@/stores/board-store'
 import { useProjectsStore } from '@/stores/projects-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
+import { useSprintStore } from '@/stores/sprint-store'
 import { useUIStore } from '@/stores/ui-store'
 import { useUndoStore } from '@/stores/undo-store'
 import type { TicketWithRelations } from '@/types'
@@ -66,7 +67,12 @@ const createPointerCollisionDetection = (
   sprintContainerRef?: React.RefObject<HTMLDivElement | null>,
 ): CollisionDetection => {
   return (args) => {
-    const { pointerCoordinates, droppableRects, droppableContainers } = args
+    const { pointerCoordinates, droppableRects, droppableContainers, active } = args
+
+    // Column reordering uses standard rect intersection (not custom ticket logic)
+    if (active.data.current?.type === 'column') {
+      return rectIntersection(args)
+    }
 
     // Fallback to rect intersection for keyboard navigation
     if (!pointerCoordinates) {
@@ -318,8 +324,8 @@ export default function BacklogPage() {
     setSearchQuery,
     setQueryText,
     setQueryMode,
-    sort,
-    setSort,
+    sort: globalSort,
+    setSort: globalSetSort,
     setColumnConfigOpen,
     filterByType,
     filterByPriority,
@@ -336,6 +342,34 @@ export default function BacklogPage() {
     queryMode,
     queryText,
   } = useBacklogStore()
+
+  // Per-section sort support
+  const unifiedSort = useSettingsStore((s) => s.unifiedSort)
+  const persistTableSort = useSettingsStore((s) => s.persistTableSort)
+  const { getSprintSort, clearAllSprintSorts } = useSprintStore()
+
+  // Helper to get the effective sort for a section
+  const getSectionSort = useCallback(
+    (sectionId: string) => {
+      if (unifiedSort) return globalSort
+      return getSprintSort(sectionId)
+    },
+    [unifiedSort, globalSort, getSprintSort],
+  )
+
+  // Effective sort for the backlog section
+  const sort = getSectionSort('backlog')
+
+  // Clear sprint sorts after hydration when sort persistence is disabled
+  const sprintHydrated = useSprintStore((s) => s._hasHydrated)
+  const sortResetRef = useRef(false)
+  useEffect(() => {
+    if (!sortResetRef.current && sprintHydrated && !persistTableSort) {
+      sortResetRef.current = true
+      globalSetSort({ column: 'key', direction: 'desc' })
+      clearAllSprintSorts()
+    }
+  }, [sprintHydrated, persistTableSort, globalSetSort, clearAllSprintSorts])
 
   // Tab cycling keyboard shortcut (Ctrl+Shift+Arrow)
   useTabCycleShortcut({ tabs: getProjectViewTabs(projectKey) })
@@ -486,18 +520,6 @@ export default function BacklogPage() {
 
     return groups
   }, [allTickets, sprints])
-
-  // Sort persistence reset
-  const persistTableSort = useSettingsStore((s) => s.persistTableSort)
-  const sortResetRef = useRef(false)
-  useEffect(() => {
-    if (!sortResetRef.current) {
-      sortResetRef.current = true
-      if (!persistTableSort) {
-        setSort({ column: 'key', direction: 'desc' })
-      }
-    }
-  }, [persistTableSort, setSort])
 
   // Debounce query text
   const [debouncedQueryText, setDebouncedQueryText] = useState(queryText)
@@ -665,7 +687,11 @@ export default function BacklogPage() {
 
   const handleDragOver = useCallback(
     (event: DragOverEvent) => {
-      const { over } = event
+      const { active, over } = event
+
+      // Column reordering is handled by dnd-kit's SortableContext — skip ticket logic
+      if (active.data.current?.type === 'column') return
+
       if (!over) {
         setDropPosition(null)
         return
@@ -693,8 +719,9 @@ export default function BacklogPage() {
           ? (overSprintId ?? 'backlog')
           : sectionId
 
-      // When sort is active, positional reorder is meaningless
-      if (sort !== null) {
+      // When sort is active for the target section, positional reorder is meaningless
+      const targetSort = getSectionSort(targetSection)
+      if (targetSort !== null) {
         const sourceSprintId = activeDragDataRef.current?.sprintId ?? null
         const sourceSectionKey = sourceSprintId ?? 'backlog'
         if (targetSection === sourceSectionKey) {
@@ -734,7 +761,7 @@ export default function BacklogPage() {
 
       setDropPosition(null)
     },
-    [ticketsBySprint, sort],
+    [ticketsBySprint, getSectionSort],
   )
 
   const handleDragEnd = useCallback(
@@ -760,11 +787,8 @@ export default function BacklogPage() {
       // Clear the captured drag data
       activeDragDataRef.current = { type: undefined, sprintId: undefined }
 
-      // Get visible backlog column IDs for column reordering detection
-      const visibleColumnIds = backlogColumns.filter((c) => c.visible).map((c) => c.id)
-
       // Case 1: Column reordering in backlog table
-      if (visibleColumnIds.includes(activeId as (typeof visibleColumnIds)[number])) {
+      if (active.data.current?.type === 'column') {
         if (activeId !== overId) {
           const oldIndex = backlogColumns.findIndex((c) => c.id === activeId)
           const newIndex = backlogColumns.findIndex((c) => c.id === overId)
@@ -818,7 +842,8 @@ export default function BacklogPage() {
       // Case A: Same-section reordering (within sprint or within backlog)
       // Skip reorder when a column sort is active (sorted view takes precedence)
       if (isSameSection) {
-        if (sort !== null) {
+        const sectionSort = getSectionSort(targetSectionKey)
+        if (sectionSort !== null) {
           showToast.info('Clear column sort to reorder manually', {
             description: 'Click the sorted column header to remove sorting',
           })
@@ -1101,7 +1126,7 @@ export default function BacklogPage() {
       clearSelection,
       dropPosition,
       updateTickets,
-      sort,
+      getSectionSort,
     ],
   )
 

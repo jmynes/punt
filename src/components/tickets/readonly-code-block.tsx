@@ -110,7 +110,7 @@ export function ReadOnlyCodeBlock({
   }, [language, codeMirrorExtensions, autoLoadLanguageSupport, code])
 
   // Get display label for the language
-  const langs = codeBlockLanguages as Record<string, string>
+  const langs = codeBlockLanguages as unknown as Record<string, string>
   const displayLabel = langs[language] || langs[''] || language || 'Plain Text'
 
   return (
