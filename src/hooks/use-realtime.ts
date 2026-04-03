@@ -55,27 +55,16 @@ type SSEEvent = TicketEvent | LabelEvent | RoleEvent | SprintEvent | ConnectedEv
  * @returns Connection status for optional UI feedback
  */
 export function useRealtime(projectId: string, enabled = true): RealtimeStatus {
-  // Demo mode: skip SSE connection, data is local only
-  if (isDemoMode()) {
-    return 'connected'
-  }
-
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+  const demoMode = isDemoMode()
   const queryClient = useQueryClient()
   const tabId = getTabId()
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
-  const [status, setStatus] = useState<RealtimeStatus>('disconnected')
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+  const [status, setStatus] = useState<RealtimeStatus>(demoMode ? 'connected' : 'disconnected')
   const eventSourceRef = useRef<EventSource | null>(null)
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const reconnectDelayRef = useRef(INITIAL_RECONNECT_DELAY)
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const mountedRef = useRef(true)
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const cleanup = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
@@ -87,7 +76,6 @@ export function useRealtime(projectId: string, enabled = true): RealtimeStatus {
     }
   }, [])
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const connect = useCallback(() => {
     if (!mountedRef.current) return
     if (!projectId) return
@@ -172,8 +160,10 @@ export function useRealtime(projectId: string, enabled = true): RealtimeStatus {
     }
   }, [projectId, tabId, queryClient, cleanup])
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   useEffect(() => {
+    // Demo mode: skip SSE connection, data is local only
+    if (demoMode) return
+
     mountedRef.current = true
 
     if (enabled && projectId) {
@@ -185,7 +175,7 @@ export function useRealtime(projectId: string, enabled = true): RealtimeStatus {
       cleanup()
       setStatus('disconnected')
     }
-  }, [enabled, projectId, connect, cleanup])
+  }, [demoMode, enabled, projectId, connect, cleanup])
 
   return status
 }

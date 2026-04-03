@@ -15,11 +15,7 @@ export interface UserData {
 
 export function useAccountUser() {
   const isDemo = isDemoMode()
-
-  const { data: session, update: updateSession } = isDemo
-    ? { data: null, update: async () => null }
-    : // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
-      useSession()
+  const { data: session, update: updateSession } = useSession()
 
   const [user, setUser] = useState<UserData | null>(
     isDemo

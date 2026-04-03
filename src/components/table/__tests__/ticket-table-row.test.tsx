@@ -144,8 +144,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
-    // biome-ignore lint/style/noNonNullAssertion: test assertion
-    const row = container.querySelector('tr[data-ticket-row]')!
+    const row = container.querySelector('tr[data-ticket-row]') as HTMLElement
     fireEvent.click(row)
 
     expect(mockSelectTicket).toHaveBeenCalledWith('ticket-1')
@@ -165,8 +164,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
-    // biome-ignore lint/style/noNonNullAssertion: test assertion
-    const row = container.querySelector('tr[data-ticket-row]')!
+    const row = container.querySelector('tr[data-ticket-row]') as HTMLElement
     fireEvent.click(row, { ctrlKey: true })
 
     expect(mockToggleTicket).toHaveBeenCalledWith('ticket-1')
@@ -186,8 +184,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
-    // biome-ignore lint/style/noNonNullAssertion: test assertion
-    const row = container.querySelector('tr[data-ticket-row]')!
+    const row = container.querySelector('tr[data-ticket-row]') as HTMLElement
     fireEvent.click(row, { metaKey: true })
 
     expect(mockToggleTicket).toHaveBeenCalledWith('ticket-1')
@@ -207,8 +204,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
-    // biome-ignore lint/style/noNonNullAssertion: test assertion
-    const row = container.querySelector('tr[data-ticket-row]')!
+    const row = container.querySelector('tr[data-ticket-row]') as HTMLElement
     fireEvent.click(row, { shiftKey: true })
 
     expect(mockSelectRange).toHaveBeenCalledWith('ticket-1', allIds)
@@ -266,8 +262,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
-    // biome-ignore lint/style/noNonNullAssertion: test assertion
-    const row = container.querySelector('tr[data-ticket-row]')!
+    const row = container.querySelector('tr[data-ticket-row]') as HTMLElement
     expect(row.className).toContain('ring-2')
   })
 
@@ -284,8 +279,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
-    // biome-ignore lint/style/noNonNullAssertion: test assertion
-    const row = container.querySelector('tr[data-ticket-row]')!
+    const row = container.querySelector('tr[data-ticket-row]') as HTMLElement
     fireEvent.keyDown(row, { key: 'Enter' })
 
     expect(mockSelectTicket).toHaveBeenCalledWith('ticket-1')
@@ -305,8 +299,7 @@ describe('TicketTableRow', () => {
       </DndWrapper>,
     )
 
-    // biome-ignore lint/style/noNonNullAssertion: test assertion
-    const row = container.querySelector('tr[data-ticket-row]')!
+    const row = container.querySelector('tr[data-ticket-row]') as HTMLElement
     fireEvent.keyDown(row, { key: ' ' })
 
     expect(mockSelectTicket).toHaveBeenCalledWith('ticket-1')
