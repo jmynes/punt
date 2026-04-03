@@ -36,7 +36,7 @@ export function SlashCommandMenu({
   }, [selectedIndex, open])
 
   // Reset selection when filter changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: filter is an intentional trigger to reset selection when it changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: filter is an intentional trigger — not read inside the effect but must cause it to re-run
   useEffect(() => {
     onSelectedIndexChange(0)
   }, [filter, onSelectedIndexChange])

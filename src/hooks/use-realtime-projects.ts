@@ -42,27 +42,16 @@ type SSEEvent = ProjectEvent | DatabaseEvent | ConnectedEvent
  * @returns Connection status for optional UI feedback
  */
 export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
-  // Demo mode: skip SSE connection, data is local only
-  if (isDemoMode()) {
-    return 'connected'
-  }
-
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+  const demo = isDemoMode()
   const queryClient = useQueryClient()
   const tabId = getTabId()
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const [status, setStatus] = useState<RealtimeProjectsStatus>('disconnected')
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const eventSourceRef = useRef<EventSource | null>(null)
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const reconnectDelayRef = useRef(INITIAL_RECONNECT_DELAY)
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const mountedRef = useRef(true)
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const cleanup = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
@@ -74,8 +63,8 @@ export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
     }
   }, [])
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   const connect = useCallback(() => {
+    if (demo) return
     if (!mountedRef.current) return
 
     cleanup()
@@ -152,13 +141,12 @@ export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
         }
       }, delay)
     }
-  }, [tabId, queryClient, cleanup])
+  }, [demo, tabId, queryClient, cleanup])
 
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
   useEffect(() => {
     mountedRef.current = true
 
-    if (enabled) {
+    if (!demo && enabled) {
       connect()
     }
 
@@ -167,7 +155,12 @@ export function useRealtimeProjects(enabled = true): RealtimeProjectsStatus {
       cleanup()
       setStatus('disconnected')
     }
-  }, [enabled, connect, cleanup])
+  }, [demo, enabled, connect, cleanup])
+
+  // Demo mode: no SSE connection needed, data is local only
+  if (demo) {
+    return 'connected'
+  }
 
   return status
 }

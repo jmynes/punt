@@ -12,14 +12,12 @@ import type { UserSummary } from '@/types'
  * In demo mode, always returns the demo user
  */
 export function useCurrentUser(): UserSummary | null {
-  // Demo mode: return demo user without session hook
-  // isDemoMode() is constant based on env vars, safe to check before hooks
-  if (isDemoMode()) {
+  const demo = isDemoMode()
+  const { data: session, status } = useSession()
+
+  if (demo) {
     return DEMO_USER_SUMMARY
   }
-
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
-  const { data: session, status } = useSession()
 
   if (status === 'loading' || !session?.user) {
     return null
@@ -41,12 +39,12 @@ export function useCurrentUser(): UserSummary | null {
  * In demo mode, always returns authenticated
  */
 export function useIsAuthenticated(): { isAuthenticated: boolean; isLoading: boolean } {
-  if (isDemoMode()) {
+  const demo = isDemoMode()
+  const { status } = useSession()
+
+  if (demo) {
     return { isAuthenticated: true, isLoading: false }
   }
-
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
-  const { status } = useSession()
 
   return {
     isAuthenticated: status === 'authenticated',
@@ -59,12 +57,12 @@ export function useIsAuthenticated(): { isAuthenticated: boolean; isLoading: boo
  * In demo mode, returns false (demo user is not admin)
  */
 export function useIsSystemAdmin(): { isSystemAdmin: boolean; isLoading: boolean } {
-  if (isDemoMode()) {
+  const demo = isDemoMode()
+  const { data: session, status } = useSession()
+
+  if (demo) {
     return { isSystemAdmin: false, isLoading: false }
   }
-
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
-  const { data: session, status } = useSession()
 
   return {
     isSystemAdmin: session?.user?.isSystemAdmin ?? false,
@@ -78,12 +76,7 @@ export function useIsSystemAdmin(): { isSystemAdmin: boolean; isLoading: boolean
  * In demo mode, returns demo user and team members
  */
 export function useProjectMembers(projectId?: string): UserSummary[] {
-  // Demo mode: always return demo members (no API call needed)
-  if (isDemoMode()) {
-    return [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES]
-  }
-
-  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is build-time constant
+  const demo = isDemoMode()
   const { data } = useQuery({
     queryKey: ['project', projectId, 'members'],
     queryFn: async () => {
@@ -94,8 +87,12 @@ export function useProjectMembers(projectId?: string): UserSummary[] {
       const responseData = await res.json()
       return responseData.map((m: { user: UserSummary }) => m.user) as UserSummary[]
     },
-    enabled: !!projectId,
+    enabled: !!projectId && !demo,
   })
+
+  if (demo) {
+    return [DEMO_USER_SUMMARY, ...DEMO_TEAM_SUMMARIES]
+  }
 
   return data || []
 }
