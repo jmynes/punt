@@ -39,8 +39,8 @@ function hashMcpKey(apiKey: string): string {
 
 /**
  * Check if the current request is authenticated via MCP API key.
+ * Checks both the new McpApiKey table (PUNT-376) and the legacy User.mcpApiKey field.
  * Hashes the incoming key and looks up the user by the hash.
- * Uses timing-safe comparison to prevent timing attacks on key enumeration.
  * Returns the user if found and active, null otherwise.
  */
 async function getMcpUser() {
@@ -61,25 +61,77 @@ async function getMcpUser() {
   // Hash the incoming key - this is deterministic so we can use it for lookup
   const keyHash = hashMcpKey(apiKey)
 
-  // Look up user by the exact hash
-  // Since SHA-256 produces unique hashes, this is effectively a constant-time
-  // comparison from the perspective of an attacker - the database either
-  // finds a match or doesn't, with no information leakage about partial matches
-  const user = await db.user.findUnique({
-    where: { mcpApiKey: keyHash },
+  // First, check the new McpApiKey table (PUNT-376: multiple keys per user)
+  const mcpApiKey = await db.mcpApiKey.findUnique({
+    where: { keyHash },
     select: {
       id: true,
-      username: true,
-      email: true,
-      name: true,
-      avatar: true,
-      isSystemAdmin: true,
-      isActive: true,
+      lastUsedAt: true,
+      user: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          name: true,
+          avatar: true,
+          isSystemAdmin: true,
+          isActive: true,
+        },
+      },
     },
   })
 
-  // Only return active users
-  if (!user?.isActive) {
+  let user: {
+    id: string
+    username: string
+    email: string | null
+    name: string
+    avatar: string | null
+    isSystemAdmin: boolean
+    isActive: boolean
+  } | null = null
+
+  if (mcpApiKey?.user?.isActive) {
+    user = mcpApiKey.user
+
+    // Update lastUsedAt if more than 5 minutes since last update (fire-and-forget)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+    if (!mcpApiKey.lastUsedAt || mcpApiKey.lastUsedAt < fiveMinutesAgo) {
+      db.mcpApiKey
+        .update({
+          where: { id: mcpApiKey.id },
+          data: { lastUsedAt: new Date() },
+        })
+        .catch((err: unknown) => {
+          logger.error(
+            'Failed to update McpApiKey.lastUsedAt',
+            err instanceof Error ? err : undefined,
+          )
+        })
+    }
+  }
+
+  // Fallback: check legacy User.mcpApiKey field for backwards compatibility
+  if (!user) {
+    const legacyUser = await db.user.findUnique({
+      where: { mcpApiKey: keyHash },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        name: true,
+        avatar: true,
+        isSystemAdmin: true,
+        isActive: true,
+      },
+    })
+
+    if (legacyUser?.isActive) {
+      user = legacyUser
+    }
+  }
+
+  if (!user) {
     return null
   }
 

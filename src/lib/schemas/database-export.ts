@@ -328,6 +328,16 @@ export const AgentSchema = z.object({
   isActive: z.boolean(),
 })
 
+export const McpApiKeySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  keyHash: z.string(),
+  keyPrefix: z.string(),
+  createdAt: z.string().datetime(),
+  lastUsedAt: nullableDate,
+  userId: z.string(),
+})
+
 // ============================================================================
 // Export data schema
 // ============================================================================
@@ -353,6 +363,7 @@ export const ExportDataSchema = z.object({
   ticketSprintHistory: z.array(TicketSprintHistorySchema),
   invitations: z.array(InvitationSchema),
   agents: z.array(AgentSchema).optional().default([]),
+  mcpApiKeys: z.array(McpApiKeySchema).optional().default([]),
 })
 
 export type ExportData = z.infer<typeof ExportDataSchema>
