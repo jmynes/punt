@@ -4,6 +4,7 @@ import {
   Bot,
   CalendarClock,
   GitBranch,
+  Import,
   Loader2,
   Settings,
   Shield,
@@ -95,6 +96,16 @@ export function ProjectSettingsShell({ tab, children }: ProjectSettingsShellProp
             label: 'Hooks',
             href: `${basePath}/hooks`,
             icon: <Webhook className="h-4 w-4" />,
+          },
+        ]
+      : []),
+    ...(canViewSettings
+      ? [
+          {
+            value: 'import',
+            label: 'Import',
+            href: `${basePath}/import`,
+            icon: <Import className="h-4 w-4" />,
           },
         ]
       : []),
