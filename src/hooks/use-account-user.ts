@@ -14,26 +14,23 @@ export interface UserData {
 }
 
 export function useAccountUser() {
-  const isDemo = isDemoMode()
+  if (isDemoMode()) {
+    // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is a build-time constant; SessionProvider is not mounted in demo mode
+    return useDemoAccountUser()
+  }
+
+  const isDemo = false
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is a build-time constant; SessionProvider is not mounted in demo mode
   const { data: session, update: updateSession } = useSession()
 
-  const [user, setUser] = useState<UserData | null>(
-    isDemo
-      ? {
-          id: DEMO_USER.id,
-          name: DEMO_USER.name,
-          email: DEMO_USER.email,
-          avatar: DEMO_USER.avatar,
-          avatarColor: null,
-          isSystemAdmin: DEMO_USER.isSystemAdmin,
-        }
-      : null,
-  )
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is a build-time constant
+  const [user, setUser] = useState<UserData | null>(null)
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is a build-time constant
   const isUpdatingRef = useRef(false)
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is a build-time constant
   useEffect(() => {
-    if (isDemo) return
     if (session?.user?.id && !isUpdatingRef.current) {
       setUser({
         id: session.user.id,
@@ -45,7 +42,6 @@ export function useAccountUser() {
       })
     }
   }, [
-    isDemo,
     session?.user?.id,
     session?.user?.name,
     session?.user?.email,
@@ -55,9 +51,10 @@ export function useAccountUser() {
   ])
 
   // Debounced session update
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is a build-time constant
   const pendingUpdateRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is a build-time constant
   const onSessionUpdate = useCallback(async () => {
-    if (isDemo) return
     if (pendingUpdateRef.current) {
       clearTimeout(pendingUpdateRef.current)
     }
@@ -74,11 +71,31 @@ export function useAccountUser() {
         }
       }, 50)
     })
-  }, [isDemo, updateSession])
+  }, [updateSession])
 
+  // biome-ignore lint/correctness/useHookAtTopLevel: isDemoMode is a build-time constant
   const handleUserUpdate = useCallback((updates: Partial<UserData>) => {
     setUser((prev) => (prev ? { ...prev, ...updates } : null))
   }, [])
 
   return { user, isDemo, handleUserUpdate, onSessionUpdate }
+}
+
+function useDemoAccountUser() {
+  const [user, setUser] = useState<UserData | null>({
+    id: DEMO_USER.id,
+    name: DEMO_USER.name,
+    email: DEMO_USER.email,
+    avatar: DEMO_USER.avatar,
+    avatarColor: null,
+    isSystemAdmin: DEMO_USER.isSystemAdmin,
+  })
+
+  const handleUserUpdate = useCallback((updates: Partial<UserData>) => {
+    setUser((prev) => (prev ? { ...prev, ...updates } : null))
+  }, [])
+
+  const onSessionUpdate = useCallback(async () => {}, [])
+
+  return { user, isDemo: true, handleUserUpdate, onSessionUpdate }
 }
