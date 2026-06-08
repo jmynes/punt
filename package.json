@@ -4,7 +4,7 @@
   "private": true,
   "license": "AGPL-3.0-or-later",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.22.1"
   },
   "scripts": {
     "predev": "node scripts/check-deps.mjs",
@@ -121,7 +121,7 @@
     "fast-check": "^4.8.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
-    "lint-staged": "^16.4.0",
+    "lint-staged": "^17.0.7",
     "msw": "^2.14.6",
     "pngjs": "^7.0.0",
     "tailwindcss": "^4.3.0",

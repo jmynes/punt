@@ -344,7 +344,7 @@ git checkout main && git pull && git branch -d <branch-name>
 
 ### Deployment
 
-Railway config in `railway.toml`. Node.js >= 20.9.0 required (enforced in `package.json`). Requires PostgreSQL 16+.
+Railway config in `railway.toml`. Node.js >= 22.22.1 required (enforced in `package.json` and `.node-version`). Requires PostgreSQL 16+.
 
 **Guided installer:** `pnpm run setup` walks through PostgreSQL detection, database creation, `.env` configuration, Prisma setup, and admin user creation. Also supports a demo mode path (no database). Script lives at `scripts/setup.ts`.
 
