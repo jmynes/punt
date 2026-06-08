@@ -51,8 +51,8 @@ export function CustomCodeLanguageSelect() {
     })
   }
 
-  // Convert codeBlockLanguages object to array
-  const languages = Object.entries(codeBlockLanguages).map(([value, label]) => ({
+  // v4: codeBlockLanguages$ now yields NormalizedCodeBlockLanguages ({ items: { value, label }[] })
+  const languages = codeBlockLanguages.items.map(({ value, label }) => ({
     value: value || EMPTY_VALUE,
     label,
   }))
