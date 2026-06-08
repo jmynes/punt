@@ -5,6 +5,7 @@ import {
   codeMirrorPlugin,
   diffSourcePlugin,
   headingsPlugin,
+  InsertCodeBlock,
   InsertThematicBreak,
   imagePlugin,
   linkDialogPlugin,
@@ -113,6 +114,7 @@ export const DescriptionEditor = React.memo(function DescriptionEditor({
         <CustomBlockTypeSelect />
         <Separator />
         <ResponsiveLinkImageToggle />
+        <InsertCodeBlock />
         <InsertThematicBreak />
       </ResponsiveViewModeToggle>
     ),
