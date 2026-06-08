@@ -109,9 +109,11 @@ export function ReadOnlyCodeBlock({
     return cleanup
   }, [language, codeMirrorExtensions, autoLoadLanguageSupport, code])
 
-  // Get display label for the language
-  const langs = codeBlockLanguages as unknown as Record<string, string>
-  const displayLabel = langs[language] || langs[''] || language || 'Plain Text'
+  // v4: codeBlockLanguages$ now yields NormalizedCodeBlockLanguages ({ items: { value, label }[] })
+  const langItem =
+    codeBlockLanguages.items.find((i) => i.value === language) ||
+    codeBlockLanguages.items.find((i) => i.value === '')
+  const displayLabel = langItem?.label || language || 'Plain Text'
 
   return (
     <div className="border border-zinc-800 rounded-md bg-zinc-950 overflow-hidden">

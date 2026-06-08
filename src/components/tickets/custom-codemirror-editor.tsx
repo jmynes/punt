@@ -211,8 +211,8 @@ export function CustomCodeMirrorEditor({
     })
   }
 
-  // Convert codeBlockLanguages object to array
-  const languagesList = Object.entries(codeBlockLanguages).map(([value, label]) => ({
+  // v4: codeBlockLanguages$ now yields NormalizedCodeBlockLanguages ({ items: { value, label }[] })
+  const languagesList = codeBlockLanguages.items.map(({ value, label }) => ({
     value: value || EMPTY_VALUE,
     label,
   }))
