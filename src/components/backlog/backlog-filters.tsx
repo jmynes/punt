@@ -994,11 +994,11 @@ export function BacklogFilters({
                 }}
                 disabled={filterByDueDate.includeNone}
                 defaultMonth={new Date()}
-                initialFocus
+                autoFocus
                 numberOfMonths={2}
                 captionLayout="dropdown"
-                fromYear={calendarStartYear}
-                toYear={new Date().getFullYear() + 1}
+                startMonth={new Date(calendarStartYear, 0)}
+                endMonth={new Date(new Date().getFullYear() + 1, 11)}
                 className={`rounded-md border-zinc-800 bg-zinc-950 text-zinc-300 ${
                   filterByDueDate.includeNone ? 'opacity-50 pointer-events-none' : ''
                 }`}

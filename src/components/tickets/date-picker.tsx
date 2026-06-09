@@ -110,10 +110,10 @@ export function DatePicker({
           selected={value || undefined}
           onSelect={(date) => onChange(date || null)}
           numberOfMonths={1}
-          initialFocus
+          autoFocus
           captionLayout="dropdown"
-          fromYear={calendarStartYear}
-          toYear={calendarMaxYear}
+          startMonth={new Date(calendarStartYear, 0)}
+          endMonth={new Date(calendarMaxYear, 11)}
           className="bg-zinc-900"
           classNames={
             value
