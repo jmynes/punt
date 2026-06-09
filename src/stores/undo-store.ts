@@ -141,6 +141,15 @@ type UndoAction =
       oldLinkType: LinkType
       newLinkType: LinkType
     }
+  | {
+      type: 'projectSwitch'
+      fromProjectId: string
+      fromProjectName: string
+      fromPath: string
+      toProjectId: string
+      toProjectName: string
+      toPath: string
+    }
 
 interface UndoEntry {
   action: UndoAction
@@ -274,6 +283,17 @@ interface UndoState {
     link: LinkAction,
     oldLinkType: LinkType,
     newLinkType: LinkType,
+    isRedo?: boolean,
+  ) => void
+
+  // Add a project switch action to the undo stack
+  pushProjectSwitch: (
+    fromProjectId: string,
+    fromProjectName: string,
+    fromPath: string,
+    toProjectId: string,
+    toProjectName: string,
+    toPath: string,
     isRedo?: boolean,
   ) => void
 
@@ -746,6 +766,42 @@ export const useUndoStore = create<UndoState>((set, get) => ({
           action: { type: 'linkUpdate', link: { ...link }, oldLinkType, newLinkType },
           timestamp: Date.now(),
           projectId,
+        },
+      ],
+      redoStack: isRedo ? state.redoStack : [],
+    }))
+  },
+
+  pushProjectSwitch: (
+    fromProjectId,
+    fromProjectName,
+    fromPath,
+    toProjectId,
+    toProjectName,
+    toPath,
+    isRedo = false,
+  ) => {
+    console.debug(`[SessionLog] Action: Project Switch ${isRedo ? '(Redo)' : ''}`, {
+      fromProjectId,
+      fromProjectName,
+      toProjectId,
+      toProjectName,
+    })
+    set((state) => ({
+      undoStack: [
+        ...state.undoStack,
+        {
+          action: {
+            type: 'projectSwitch',
+            fromProjectId,
+            fromProjectName,
+            fromPath,
+            toProjectId,
+            toProjectName,
+            toPath,
+          },
+          timestamp: Date.now(),
+          projectId: toProjectId,
         },
       ],
       redoStack: isRedo ? state.redoStack : [],

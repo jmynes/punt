@@ -2,6 +2,7 @@
 
 import { useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import {
@@ -52,6 +53,7 @@ import { LINK_TYPE_LABELS } from '@/types'
 
 export function KeyboardShortcuts() {
   const queryClient = useQueryClient()
+  const router = useRouter()
   // Only subscribe to reactive state we need for re-renders
   const { getColumns } = useBoardStore()
   const activeProjectId = useUIStore((state) => state.activeProjectId)
@@ -1069,6 +1071,18 @@ export function KeyboardShortcuts() {
               useUndoStore.getState().setProcessing(false)
             }
           })()
+        } else if (entry.action.type === 'projectSwitch') {
+          const action = entry.action
+          // Navigate back to the previous project
+          useUIStore.getState().setActiveProjectId(action.fromProjectId)
+          router.push(action.fromPath)
+          undoStore.pushRedo(entry)
+
+          showUndoRedoToast('success', {
+            title: 'Switched back',
+            description: action.fromProjectName,
+            duration: 3000,
+          })
         } else if (entry.action.type === 'backlogReorder') {
           const action = entry.action
           const { setBacklogOrder } = useBacklogStore.getState()
@@ -1945,6 +1959,27 @@ export function KeyboardShortcuts() {
           lastAttachmentToastRef.current = redoAttDelToastId
 
           redoStore.pushAttachmentDelete(entry.projectId, action.attachments, true)
+        } else if (entry.action.type === 'projectSwitch') {
+          const action = entry.action
+          // Navigate forward to the new project again
+          useUIStore.getState().setActiveProjectId(action.toProjectId)
+          router.push(action.toPath)
+
+          redoStore.pushProjectSwitch(
+            action.fromProjectId,
+            action.fromProjectName,
+            action.fromPath,
+            action.toProjectId,
+            action.toProjectName,
+            action.toPath,
+            true,
+          )
+
+          showUndoRedoToast('success', {
+            title: 'Switched to project',
+            description: action.toProjectName,
+            duration: 3000,
+          })
         } else if (entry.action.type === 'backlogReorder') {
           const action = entry.action
           const { setBacklogOrder } = useBacklogStore.getState()
@@ -2216,6 +2251,7 @@ export function KeyboardShortcuts() {
     activeTicketId,
     projectId,
     queryClient,
+    router,
   ])
 
   return (
