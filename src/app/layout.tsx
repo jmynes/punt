@@ -15,7 +15,16 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+// Absolute base for og:image and other social metadata. Baked at build
+// time, so it must come from env, not request headers. Falls back to
+// Railway's auto-provided domain, then to Next's localhost default.
+const appUrl =
+  process.env.NEXTAUTH_URL ??
+  process.env.NEXT_PUBLIC_APP_URL ??
+  (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : undefined)
+
 export const metadata: Metadata = {
+  metadataBase: appUrl ? new URL(appUrl) : undefined,
   title: 'PUNT - Simple Kanban & Ticket Tracker',
   description:
     'A lightweight, self-hosted ticket tracker and kanban board. Jira-like without the bloat.',
