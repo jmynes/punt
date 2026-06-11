@@ -1,5 +1,7 @@
 packages:
   - "mcp"
+overrides:
+  diff: ">=8.0.3"
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true

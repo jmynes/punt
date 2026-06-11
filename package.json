@@ -91,17 +91,6 @@
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
-  "pnpm": {
-    "overrides": {
-      "diff": ">=8.0.3"
-    },
-    "onlyBuiltDependencies": [
-      "@prisma/client",
-      "@prisma/engines",
-      "esbuild",
-      "prisma"
-    ]
-  },
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",
     "@playwright/test": "^1.60.0",
