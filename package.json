@@ -6,6 +6,7 @@
   "engines": {
     "node": ">=22.22.1"
   },
+  "packageManager": "pnpm@11.5.2",
   "scripts": {
     "predev": "node scripts/check-deps.mjs",
     "dev": "next dev --turbopack",

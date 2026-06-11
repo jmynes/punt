@@ -1,1 +1,4 @@
 packages: []
+allowBuilds:
+  # postinstall only prints a funding banner; not needed for builds
+  core-js: false
