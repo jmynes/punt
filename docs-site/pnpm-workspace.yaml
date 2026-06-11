@@ -1,4 +1,5 @@
 packages: []
 allowBuilds:
+  '@swc/core': true
   # postinstall only prints a funding banner; not needed for builds
   core-js: false
