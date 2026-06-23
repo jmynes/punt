@@ -66,9 +66,9 @@ export default defineConfig({
       // Aspirational target remains 80% global / 90% for stores/API/utils.
       thresholds: {
         lines: 49,
-        functions: 43,
-        branches: 39,
-        statements: 48,
+        functions: 44,
+        branches: 40,
+        statements: 49,
       },
     },
   },
