@@ -65,10 +65,10 @@ export default defineConfig({
       // improves — they should only ever go UP, never down.
       // Aspirational target remains 80% global / 90% for stores/API/utils.
       thresholds: {
-        lines: 46,
-        functions: 39,
-        branches: 37,
-        statements: 45,
+        lines: 49,
+        functions: 43,
+        branches: 39,
+        statements: 48,
       },
     },
   },
