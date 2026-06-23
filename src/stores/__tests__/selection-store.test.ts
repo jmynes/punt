@@ -6,6 +6,8 @@ describe('Selection Store', () => {
     useSelectionStore.setState({
       selectedTicketIds: new Set(),
       lastSelectedId: null,
+      ticketOrigins: new Map(),
+      copiedTicketIds: [],
     })
   })
 
@@ -130,6 +132,67 @@ describe('Selection Store', () => {
       expect(ids).toContain('ticket-1')
       expect(ids).toContain('ticket-2')
       expect(ids).toHaveLength(2)
+    })
+  })
+
+  describe('selectRange edge cases', () => {
+    it('selects only the current ticket when the last or current id is not in the list', () => {
+      useSelectionStore.getState().selectTicket('anchor')
+      // 'anchor' is not present in the provided list -> lastIndex === -1 branch
+      useSelectionStore.getState().selectRange('ticket-2', ['ticket-1', 'ticket-2', 'ticket-3'])
+      expect(useSelectionStore.getState().getSelectedIds()).toEqual(['ticket-2'])
+      expect(useSelectionStore.getState().lastSelectedId).toBe('ticket-2')
+    })
+  })
+
+  describe('ticket origins', () => {
+    it('stores and retrieves a ticket origin', () => {
+      useSelectionStore.getState().setTicketOrigin('ticket-1', { columnId: 'col-1', position: 3 })
+      expect(useSelectionStore.getState().getTicketOrigin('ticket-1')).toEqual({
+        columnId: 'col-1',
+        position: 3,
+      })
+    })
+
+    it('returns undefined for an unknown origin', () => {
+      expect(useSelectionStore.getState().getTicketOrigin('nope')).toBeUndefined()
+    })
+
+    it('clears origins when selecting a single ticket', () => {
+      useSelectionStore.getState().setTicketOrigin('ticket-1', { columnId: 'col-1', position: 0 })
+      useSelectionStore.getState().selectTicket('ticket-2')
+      expect(useSelectionStore.getState().getTicketOrigin('ticket-1')).toBeUndefined()
+    })
+
+    it('clears origins on clearSelection', () => {
+      useSelectionStore.getState().setTicketOrigin('ticket-1', { columnId: 'col-1', position: 0 })
+      useSelectionStore.getState().clearSelection()
+      expect(useSelectionStore.getState().getTicketOrigin('ticket-1')).toBeUndefined()
+    })
+  })
+
+  describe('clipboard', () => {
+    it('copies the current selection to the clipboard', () => {
+      useSelectionStore.getState().selectTicket('ticket-1')
+      useSelectionStore.getState().toggleTicket('ticket-2')
+      useSelectionStore.getState().copySelected()
+      const copied = useSelectionStore.getState().getCopiedIds()
+      expect(copied).toContain('ticket-1')
+      expect(copied).toContain('ticket-2')
+      expect(copied).toHaveLength(2)
+    })
+
+    it('copying does not change the live selection', () => {
+      useSelectionStore.getState().selectTicket('ticket-1')
+      useSelectionStore.getState().copySelected()
+      expect(useSelectionStore.getState().getSelectedIds()).toEqual(['ticket-1'])
+    })
+
+    it('clears the clipboard', () => {
+      useSelectionStore.getState().selectTicket('ticket-1')
+      useSelectionStore.getState().copySelected()
+      useSelectionStore.getState().clearClipboard()
+      expect(useSelectionStore.getState().getCopiedIds()).toEqual([])
     })
   })
 })
