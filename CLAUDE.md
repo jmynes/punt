@@ -234,7 +234,7 @@ src/
 
 Vitest + React Testing Library + MSW. Tests in `__tests__/` subdirectories. See `docs/TESTING.md` for detailed guide.
 
-Coverage target: 80% minimum, 90% for stores/API/utils. Database tests run in separate vitest project to prevent race conditions. Tests require a PostgreSQL test database (see `.env.test`).
+Coverage is enforced in CI via `pnpm test:ci` against a **ratchet floor** in `vitest.config.ts` (currently lines 41 / statements 40 / functions 36 / branches 32). The floor sits just below actual coverage and should only ever be raised, never lowered — bumping it up as coverage improves prevents backsliding. The aspirational target remains 80% global / 90% for stores/API/utils; the gap is tracked for follow-up work. Database tests run in a separate vitest project to prevent race conditions. Tests require a PostgreSQL test database (see `.env.test`).
 
 ### Security
 
