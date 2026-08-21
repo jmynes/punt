@@ -1,11 +1,23 @@
 'use client'
 
-import { useQueryClient } from '@tanstack/react-query'
-import { Check, Copy, Eye, EyeOff, FileText, KeyRound, Terminal, Trash2 } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { formatDistanceToNow } from 'date-fns'
+import { Check, Copy, Eye, EyeOff, FileText, KeyRound, Plus, Terminal, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button, LoadingButton } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CodeBlock } from '@/components/ui/code-block'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { apiFetch, basePath } from '@/lib/base-path'
 import { showToast } from '@/lib/toast'
@@ -14,6 +26,14 @@ import { ReauthDialog } from './reauth-dialog'
 
 interface MCPTabProps {
   isDemo: boolean
+}
+
+interface McpApiKeyData {
+  id: string
+  name: string
+  keyPrefix: string
+  createdAt: string
+  lastUsedAt: string | null
 }
 
 /**
@@ -57,25 +77,56 @@ function PathDisplay({ path, onCopy }: { path: string; onCopy?: () => void }) {
   )
 }
 
-export function MCPTab({ isDemo }: MCPTabProps) {
-  const queryClient = useQueryClient()
-  const [mcpKeyLoading, setMcpKeyLoading] = useState(false)
-  const [mcpHasKey, setMcpHasKey] = useState(false)
-  const [mcpKeyHint, setMcpKeyHint] = useState<string | null>(null)
-  const [mcpNewKey, setMcpNewKey] = useState<string | null>(null)
-  const [mcpKeyVisible, setMcpKeyVisible] = useState(false)
-  const [mcpKeyFetched, setMcpKeyFetched] = useState(false)
-  const [mcpKeyCopied, setMcpKeyCopied] = useState(false)
+/**
+ * Row for a single MCP API key
+ */
+function McpKeyRow({
+  apiKey,
+  onRevoke,
+}: {
+  apiKey: McpApiKeyData
+  onRevoke: (keyId: string) => void
+}) {
+  return (
+    <div className="flex items-center gap-4 px-4 py-3 border-b border-zinc-800 last:border-b-0">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <KeyRound className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+          <span className="text-sm font-medium text-zinc-200 truncate">{apiKey.name}</span>
+          <code className="text-xs font-mono text-zinc-500">{apiKey.keyPrefix}...</code>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-6 text-xs text-zinc-400 shrink-0">
+        <div className="w-28 text-right" title="Last used">
+          {apiKey.lastUsedAt
+            ? formatDistanceToNow(new Date(apiKey.lastUsedAt), { addSuffix: true })
+            : 'Never used'}
+        </div>
+        <div className="w-28 text-right" title="Created">
+          {formatDistanceToNow(new Date(apiKey.createdAt), { addSuffix: true })}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 text-zinc-500 hover:text-red-400"
+          onClick={() => onRevoke(apiKey.id)}
+          title="Revoke key"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Newly created key display with copy functionality
+ */
+function NewKeyDisplay({ apiKey, onDismiss }: { apiKey: string; onDismiss: () => void }) {
+  const [visible, setVisible] = useState(true)
+  const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  // Defer Radix Tabs to client to avoid hydration ID mismatch
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-
-  // Reauth dialog state
-  const [showGenerateDialog, setShowGenerateDialog] = useState(false)
-  const [showRegenerateDialog, setShowRegenerateDialog] = useState(false)
-  const [showRevokeDialog, setShowRevokeDialog] = useState(false)
 
   useEffect(() => {
     return () => {
@@ -83,89 +134,290 @@ export function MCPTab({ isDemo }: MCPTabProps) {
     }
   }, [])
 
-  const fetchMcpKeyStatus = useCallback(async () => {
-    if (isDemo) return
+  const handleCopy = useCallback(async () => {
     try {
-      const res = await apiFetch('/api/me/mcp-key')
-      if (res.ok) {
-        const data = (await res.json()) as { hasKey: boolean; keyHint: string | null }
-        setMcpHasKey(data.hasKey)
-        setMcpKeyHint(data.keyHint)
-        setMcpKeyFetched(true)
-      }
+      await navigator.clipboard.writeText(apiKey)
+      setCopied(true)
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
+      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000)
+      showToast.success('API key copied to clipboard')
     } catch {
-      // Silently fail
+      showToast.error('Failed to copy to clipboard')
     }
-  }, [isDemo])
+  }, [apiKey])
 
-  // Fetch on mount
-  useEffect(() => {
-    if (!mcpKeyFetched) fetchMcpKeyStatus()
-  }, [mcpKeyFetched, fetchMcpKeyStatus])
+  return (
+    <div className="space-y-3 mb-4">
+      <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+        <KeyRound className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+        <p className="text-xs text-amber-300">Copy this key now. It will not be shown again.</p>
+      </div>
+      <div className="flex items-center gap-2 p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg font-mono text-sm">
+        <code className="flex-1 truncate text-zinc-200 select-all">
+          {visible ? apiKey : '\u2022'.repeat(40)}
+        </code>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="shrink-0 h-8 w-8 p-0 text-zinc-400 hover:text-zinc-200"
+          onClick={() => setVisible(!visible)}
+        >
+          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="shrink-0 h-8 w-8 p-0 text-zinc-400 hover:text-zinc-200"
+          onClick={handleCopy}
+        >
+          {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+        </Button>
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-zinc-400 hover:text-zinc-200"
+        onClick={onDismiss}
+      >
+        Dismiss
+      </Button>
+    </div>
+  )
+}
 
-  // Refetch when SSE notifies of key change (covers CLI, UI, and cross-tab updates)
-  useEffect(() => {
-    const onKeyUpdated = () => fetchMcpKeyStatus()
-    window.addEventListener('punt:mcp-key-updated', onKeyUpdated)
-    return () => window.removeEventListener('punt:mcp-key-updated', onKeyUpdated)
-  }, [fetchMcpKeyStatus])
-
-  const handleGenerateMcpKey = async (
-    password?: string,
+/**
+ * Two-step dialog for creating a new API key:
+ * Step 1: Enter key name
+ * Step 2: Re-authenticate with password (+ 2FA if enabled)
+ */
+function CreateKeyDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onConfirm: (
+    name: string,
+    password: string,
     totpCode?: string,
     isRecoveryCode?: boolean,
-  ) => {
-    setMcpKeyLoading(true)
-    try {
-      const res = await apiFetch('/api/me/mcp-key', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, totpCode, isRecoveryCode }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        // Check if 2FA is required
-        if (data.requires2fa) {
-          throw new Error('2FA code required')
-        }
-        throw new Error(data.error || 'Failed to generate API key')
-      }
-      setMcpNewKey(data.apiKey)
-      setMcpKeyVisible(true)
-      setMcpHasKey(true)
-      setMcpKeyHint(data.apiKey.slice(-4))
-      queryClient.invalidateQueries({ queryKey: ['agents'] })
-      queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] })
-      showToast.success('MCP API key generated')
-    } finally {
-      setMcpKeyLoading(false)
+  ) => Promise<void>
+}) {
+  const [step, setStep] = useState<'name' | 'auth'>('name')
+  const [keyName, setKeyName] = useState('')
+  const [nameError, setNameError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  // Reset when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setStep('name')
+      setKeyName('')
+      setNameError(null)
+      setLoading(false)
     }
+  }, [open])
+
+  const handleNameSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmed = keyName.trim()
+    if (!trimmed) {
+      setNameError('Key name is required')
+      return
+    }
+    if (trimmed.length > 100) {
+      setNameError('Key name must be 100 characters or less')
+      return
+    }
+    setNameError(null)
+    setStep('auth')
   }
 
-  const handleRevokeMcpKey = async (
+  if (step === 'auth') {
+    return (
+      <ReauthDialog
+        open={open}
+        onOpenChange={(o) => {
+          if (!o) {
+            onOpenChange(false)
+          }
+        }}
+        title={`Create key "${keyName.trim()}"`}
+        description="Enter your password to create the API key."
+        actionLabel="Create Key"
+        onConfirm={async (password, totpCode, isRecoveryCode) => {
+          await onConfirm(keyName.trim(), password, totpCode, isRecoveryCode)
+        }}
+      />
+    )
+  }
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent
+        className="bg-zinc-900 border-zinc-800"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault()
+          setTimeout(() => {
+            document.getElementById('create-key-name')?.focus()
+          }, 0)
+        }}
+      >
+        <form onSubmit={handleNameSubmit}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">Create MCP API Key</AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              Give this key a descriptive name so you can identify it later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-key-name" className="text-zinc-300">
+                Key Name
+              </Label>
+              <Input
+                id="create-key-name"
+                type="text"
+                value={keyName}
+                onChange={(e) => {
+                  setKeyName(e.target.value)
+                  setNameError(null)
+                }}
+                className="bg-zinc-800 border-zinc-700 text-zinc-100"
+                placeholder='e.g., "Work laptop", "CI server"'
+                maxLength={100}
+                autoFocus
+                required
+              />
+              {nameError && <p className="text-sm text-red-400">{nameError}</p>}
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              type="button"
+              className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+              disabled={loading}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <LoadingButton
+              type="submit"
+              loading={loading}
+              disabled={!keyName.trim()}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              Next
+            </LoadingButton>
+          </AlertDialogFooter>
+        </form>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+export function MCPTab({ isDemo }: MCPTabProps) {
+  const queryClient = useQueryClient()
+  const [mcpKeyLoading, setMcpKeyLoading] = useState(false)
+  const [mcpNewKey, setMcpNewKey] = useState<string | null>(null)
+
+  // Defer Radix Tabs to client to avoid hydration ID mismatch
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  // Dialog state
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [revokeKeyId, setRevokeKeyId] = useState<string | null>(null)
+
+  // Fetch keys from new multi-key endpoint
+  const {
+    data: mcpKeys,
+    isLoading: keysLoading,
+    refetch: refetchKeys,
+  } = useQuery<McpApiKeyData[]>({
+    queryKey: ['mcp-keys', 'me'],
+    queryFn: async () => {
+      if (isDemo) return []
+      const res = await apiFetch('/api/me/mcp-keys')
+      if (!res.ok) throw new Error('Failed to fetch MCP keys')
+      return res.json()
+    },
+    enabled: !isDemo,
+  })
+
+  // Also check legacy key status for backwards compatibility display
+  const { data: legacyKeyStatus } = useQuery<{ hasKey: boolean; keyHint: string | null }>({
+    queryKey: ['mcp-key-legacy'],
+    queryFn: async () => {
+      if (isDemo) return { hasKey: false, keyHint: null }
+      const res = await apiFetch('/api/me/mcp-key')
+      if (!res.ok) return { hasKey: false, keyHint: null }
+      return res.json()
+    },
+    enabled: !isDemo,
+  })
+
+  // Refetch when SSE notifies of key change
+  useEffect(() => {
+    const onKeyUpdated = () => {
+      refetchKeys()
+      queryClient.invalidateQueries({ queryKey: ['mcp-key-legacy'] })
+    }
+    window.addEventListener('punt:mcp-key-updated', onKeyUpdated)
+    return () => window.removeEventListener('punt:mcp-key-updated', onKeyUpdated)
+  }, [refetchKeys, queryClient])
+
+  const handleCreateKey = async (
+    name: string,
     password: string,
     totpCode?: string,
     isRecoveryCode?: boolean,
   ) => {
     setMcpKeyLoading(true)
     try {
-      const res = await apiFetch('/api/me/mcp-key', {
+      const res = await apiFetch('/api/me/mcp-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, password, totpCode, isRecoveryCode }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.requires2fa) {
+          throw new Error('2FA code required')
+        }
+        throw new Error(data.error || 'Failed to create API key')
+      }
+      setMcpNewKey(data.apiKey)
+      setShowCreateDialog(false)
+      refetchKeys()
+      queryClient.invalidateQueries({ queryKey: ['agents'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] })
+      showToast.success('MCP API key created')
+    } finally {
+      setMcpKeyLoading(false)
+    }
+  }
+
+  const handleRevokeKey = async (password: string, totpCode?: string, isRecoveryCode?: boolean) => {
+    if (!revokeKeyId) return
+    setMcpKeyLoading(true)
+    try {
+      const res = await apiFetch(`/api/me/mcp-keys/${revokeKeyId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password, totpCode, isRecoveryCode }),
       })
       const data = await res.json()
       if (!res.ok) {
-        // Check if 2FA is required
         if (data.requires2fa) {
           throw new Error('2FA code required')
         }
         throw new Error(data.error || 'Failed to revoke API key')
       }
-      setMcpHasKey(false)
-      setMcpKeyHint(null)
-      setMcpNewKey(null)
-      setMcpKeyVisible(false)
+      setRevokeKeyId(null)
+      refetchKeys()
       queryClient.invalidateQueries({ queryKey: ['agents'] })
       queryClient.invalidateQueries({ queryKey: ['admin', 'agents'] })
       showToast.success('MCP API key revoked')
@@ -174,19 +426,6 @@ export function MCPTab({ isDemo }: MCPTabProps) {
     }
   }
 
-  const handleCopyMcpKey = useCallback(async () => {
-    if (!mcpNewKey) return
-    try {
-      await navigator.clipboard.writeText(mcpNewKey)
-      setMcpKeyCopied(true)
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current)
-      copyTimeoutRef.current = setTimeout(() => setMcpKeyCopied(false), 2000)
-      showToast.success('API key copied to clipboard')
-    } catch {
-      showToast.error('Failed to copy to clipboard')
-    }
-  }, [mcpNewKey])
-
   if (isDemo) {
     return (
       <div className="space-y-6">
@@ -194,7 +433,7 @@ export function MCPTab({ isDemo }: MCPTabProps) {
           <CardHeader className="pb-4">
             <div className="flex items-center gap-2">
               <Terminal className="h-5 w-5 text-amber-500" />
-              <CardTitle className="text-zinc-100">MCP API Key</CardTitle>
+              <CardTitle className="text-zinc-100">MCP API Keys</CardTitle>
             </div>
             <CardDescription className="text-zinc-500">
               API key management is not available in demo mode
@@ -212,134 +451,106 @@ export function MCPTab({ isDemo }: MCPTabProps) {
     )
   }
 
+  const hasKeys = (mcpKeys && mcpKeys.length > 0) ?? false
+  const hasLegacyKey = legacyKeyStatus?.hasKey ?? false
+
   return (
     <div className="space-y-6">
       <Card className="border-zinc-800 bg-zinc-900/50">
         <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <Terminal className="h-5 w-5 text-amber-500" />
-            <CardTitle className="text-zinc-100">MCP API Key</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Terminal className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-zinc-100">MCP API Keys</CardTitle>
+            </div>
+            <Button
+              onClick={() => setShowCreateDialog(true)}
+              disabled={mcpKeyLoading}
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Create Key
+            </Button>
           </div>
           <CardDescription className="text-zinc-500">
-            Generate an API key to connect Claude Code to PUNT via MCP
+            Create and manage API keys to connect Claude Code to PUNT via MCP. Each key can be named
+            for easy identification.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {mcpHasKey ? (
-            <>
-              {mcpNewKey ? (
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                    <KeyRound className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-300">
-                      Copy this key now. It won't be shown again.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg font-mono text-sm">
-                    <code className="flex-1 truncate text-zinc-200 select-all">
-                      {mcpKeyVisible ? mcpNewKey : '•'.repeat(40)}
-                    </code>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0 h-8 w-8 p-0 text-zinc-400 hover:text-zinc-200"
-                      onClick={() => setMcpKeyVisible(!mcpKeyVisible)}
-                    >
-                      {mcpKeyVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0 h-8 w-8 p-0 text-zinc-400 hover:text-zinc-200"
-                      onClick={handleCopyMcpKey}
-                    >
-                      {mcpKeyCopied ? (
-                        <Check className="h-4 w-4 text-emerald-400" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3 px-3 py-2 bg-zinc-800/50 border border-zinc-700 rounded-lg">
-                  <KeyRound className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <p className="text-sm text-zinc-300">
-                    {mcpKeyHint ? (
-                      <>
-                        Active key ending in{' '}
-                        <code className="text-amber-400 font-mono">...{mcpKeyHint}</code>
-                      </>
-                    ) : (
-                      'MCP API key is configured'
-                    )}
-                  </p>
-                </div>
-              )}
+          {/* Newly created key display */}
+          {mcpNewKey && <NewKeyDisplay apiKey={mcpNewKey} onDismiss={() => setMcpNewKey(null)} />}
 
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={mcpKeyLoading}
-                  className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                  onClick={() => setShowRegenerateDialog(true)}
-                >
-                  <KeyRound className="h-4 w-4 mr-2" />
-                  Regenerate Key
-                </Button>
-                <ReauthDialog
-                  open={showRegenerateDialog}
-                  onOpenChange={setShowRegenerateDialog}
-                  title="Regenerate MCP API Key?"
-                  description="This will immediately invalidate the current API key. Any MCP clients using this key will stop working. You will need to update your credentials file with the new key."
-                  actionLabel="Regenerate Key"
-                  onConfirm={handleGenerateMcpKey}
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-zinc-400 hover:text-red-400"
-                  disabled={mcpKeyLoading}
-                  onClick={() => setShowRevokeDialog(true)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Revoke Key
-                </Button>
-                <ReauthDialog
-                  open={showRevokeDialog}
-                  onOpenChange={setShowRevokeDialog}
-                  title="Revoke MCP API Key?"
-                  description="This will immediately invalidate the current API key. Any MCP clients using this key will stop working."
-                  actionLabel="Revoke Key"
-                  actionVariant="destructive"
-                  onConfirm={handleRevokeMcpKey}
-                />
-              </div>
-            </>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-zinc-400">
-                Generate an API key to authenticate MCP requests from Claude Code.
+          {/* Legacy key notice */}
+          {hasLegacyKey && (
+            <div className="flex items-center gap-3 px-3 py-2 bg-zinc-800/50 border border-zinc-700 rounded-lg">
+              <KeyRound className="h-4 w-4 text-zinc-500 shrink-0" />
+              <p className="text-xs text-zinc-400">
+                You have a legacy API key
+                {legacyKeyStatus?.keyHint ? (
+                  <>
+                    {' '}
+                    ending in{' '}
+                    <code className="text-amber-400 font-mono">...{legacyKeyStatus.keyHint}</code>
+                  </>
+                ) : null}
+                . It still works, but consider creating named keys for better management.
               </p>
-              <Button
-                onClick={() => setShowGenerateDialog(true)}
-                disabled={mcpKeyLoading}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-              >
-                <KeyRound className="h-4 w-4 mr-2" />
-                Generate API Key
-              </Button>
-              <ReauthDialog
-                open={showGenerateDialog}
-                onOpenChange={setShowGenerateDialog}
-                title="Generate MCP API Key"
-                description="Enter your password to generate a new API key for MCP access."
-                actionLabel="Generate Key"
-                onConfirm={handleGenerateMcpKey}
-              />
             </div>
           )}
+
+          {/* Key list */}
+          {keysLoading ? (
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-12 rounded-md bg-zinc-800/30 animate-pulse" />
+              ))}
+            </div>
+          ) : hasKeys ? (
+            <div className="rounded-lg border border-zinc-700/50 overflow-hidden bg-zinc-800/20">
+              {/* Header */}
+              <div className="flex items-center gap-4 px-4 py-2 border-b border-zinc-700/50 bg-zinc-800/50">
+                <div className="flex-1 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                  Key
+                </div>
+                <div className="flex items-center gap-6 text-xs font-medium text-zinc-500 uppercase tracking-wider shrink-0">
+                  <div className="w-28 text-right">Last Used</div>
+                  <div className="w-28 text-right">Created</div>
+                  <div className="w-7" />
+                </div>
+              </div>
+              {mcpKeys?.map((key) => (
+                <McpKeyRow key={key.id} apiKey={key} onRevoke={(id) => setRevokeKeyId(id)} />
+              ))}
+            </div>
+          ) : !hasLegacyKey ? (
+            <div className="px-4 py-6 text-center text-zinc-500 bg-zinc-800/30 rounded-lg border border-zinc-700/50">
+              <p className="text-sm">
+                No API keys yet. Create one to authenticate MCP requests from Claude Code.
+              </p>
+            </div>
+          ) : null}
+
+          {/* Create key dialog */}
+          <CreateKeyDialog
+            open={showCreateDialog}
+            onOpenChange={setShowCreateDialog}
+            onConfirm={handleCreateKey}
+          />
+
+          {/* Revoke key dialog */}
+          <ReauthDialog
+            open={revokeKeyId !== null}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) setRevokeKeyId(null)
+            }}
+            title="Revoke MCP API Key?"
+            description="This will immediately invalidate the key. Any MCP clients using it will stop working."
+            actionLabel="Revoke Key"
+            actionVariant="destructive"
+            onConfirm={handleRevokeKey}
+          />
         </CardContent>
       </Card>
 

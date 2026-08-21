@@ -235,6 +235,7 @@ describe('Database Backup Comprehensiveness', () => {
       expect(Array.isArray(data.attachments)).toBe(true)
       expect(Array.isArray(data.ticketSprintHistory)).toBe(true)
       expect(Array.isArray(data.invitations)).toBe(true)
+      expect(Array.isArray(data.mcpApiKeys)).toBe(true)
     })
 
     it('should NOT export ephemeral/security-sensitive models', async () => {

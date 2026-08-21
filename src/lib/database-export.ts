@@ -84,6 +84,7 @@ export async function exportDatabase(options: ExportOptions = {}): Promise<Expor
     ticketSprintHistory,
     invitations,
     agents,
+    mcpApiKeys,
   ] = await Promise.all([
     db.systemSettings.findUnique({ where: { id: 'system-settings' } }),
     db.user.findMany({
@@ -151,6 +152,9 @@ export async function exportDatabase(options: ExportOptions = {}): Promise<Expor
       orderBy: { createdAt: 'asc' },
     }),
     db.agent.findMany({
+      orderBy: { createdAt: 'asc' },
+    }),
+    db.mcpApiKey.findMany({
       orderBy: { createdAt: 'asc' },
     }),
   ])
@@ -279,6 +283,11 @@ export async function exportDatabase(options: ExportOptions = {}): Promise<Expor
       ...a,
       createdAt: a.createdAt.toISOString(),
       lastActiveAt: a.lastActiveAt?.toISOString() ?? null,
+    })),
+    mcpApiKeys: mcpApiKeys.map((k) => ({
+      ...k,
+      createdAt: k.createdAt.toISOString(),
+      lastUsedAt: k.lastUsedAt?.toISOString() ?? null,
     })),
   } as ExportData
 }
