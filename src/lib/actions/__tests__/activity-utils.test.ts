@@ -92,7 +92,7 @@ describe('deleteActivityEntries', () => {
     const [url, init] = mockApiFetch.mock.calls[0]
     expect(url).toBe('/api/projects/PUNT/tickets/ticket-1/activity/batch-delete')
     expect(init?.method).toBe('POST')
-    expect((init?.headers as Record<string, string>)['X-Tab-Id']).toBe('test-tab-id')
+    expect((init?.headers as Record<string, string> | undefined)?.['X-Tab-Id']).toBe('test-tab-id')
     expect(JSON.parse(init?.body as string)).toEqual({ groupId: 'g1', activityIds: ['a1', 'a2'] })
   })
 
