@@ -45,10 +45,12 @@ import { useHasAnyPermission, useHasPermission } from '@/hooks/use-permissions'
 import { PERMISSIONS } from '@/lib/permissions'
 import { showToast } from '@/lib/toast'
 import { cn } from '@/lib/utils'
-import type { ProjectSummary } from '@/stores/projects-store'
+import { type ProjectSummary, useProjectsStore } from '@/stores/projects-store'
 import { useRoleSimulationStore } from '@/stores/role-simulation-store'
 import { useSelectionStore } from '@/stores/selection-store'
 import { useSettingsStore } from '@/stores/settings-store'
+import { useUIStore } from '@/stores/ui-store'
+import { useUndoStore } from '@/stores/undo-store'
 import type { UserSummary } from '@/types'
 import { ProjectContextMenu } from './project-context-menu'
 
@@ -158,6 +160,7 @@ function TruncatedProjectLink({
   const defaultProjectView = useSettingsStore((s) => s.defaultProjectView)
   const nameRef = useRef<HTMLSpanElement>(null)
   const [isTruncated, setIsTruncated] = useState(false)
+  const pathname = usePathname()
 
   useEffect(() => {
     const el = nameRef.current
@@ -169,12 +172,31 @@ function TruncatedProjectLink({
     return () => observer.disconnect()
   }, [])
 
+  const toPath = `/projects/${project.key}/${defaultProjectView}`
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Link
-          href={`/projects/${project.key}/${defaultProjectView}`}
+          href={toPath}
           onClick={() => {
+            // Push undo entry when switching to a different project
+            const currentActiveId = useUIStore.getState().activeProjectId
+            if (currentActiveId && currentActiveId !== project.id) {
+              const fromProject = useProjectsStore.getState().getProject(currentActiveId)
+              if (fromProject) {
+                useUndoStore
+                  .getState()
+                  .pushProjectSwitch(
+                    fromProject.id,
+                    fromProject.name,
+                    pathname,
+                    project.id,
+                    project.name,
+                    toPath,
+                  )
+              }
+            }
             onSetActiveProjectId(project.id)
             handleLinkClick()
           }}
