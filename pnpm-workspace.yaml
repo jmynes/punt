@@ -2,11 +2,11 @@ packages:
   - "mcp"
 overrides:
   diff: ">=8.0.3"
-  vite: "^8.0.16"
+  vite: "^8.2.1"
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
-  '@tsparticles/engine': true
+  '@tsparticles/engine': false
   esbuild: true
   msw: true
   prisma: true
