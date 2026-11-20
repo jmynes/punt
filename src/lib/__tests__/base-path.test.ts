@@ -12,7 +12,7 @@ describe('base-path with no NEXT_PUBLIC_BASE_PATH', () => {
   })
 
   it('assetUrl returns the path or undefined for nullish input', () => {
-    expect(assetUrl('/uploads/a.webp')).toBe('/uploads/a.webp')
+    expect(assetUrl('/uploads/a.webp')).toBe('/api/uploads/a.webp')
     expect(assetUrl(null)).toBeUndefined()
     expect(assetUrl(undefined)).toBeUndefined()
   })
@@ -50,7 +50,7 @@ describe('base-path with NEXT_PUBLIC_BASE_PATH set', () => {
   it('prepends the basePath in withBasePath / assetUrl', async () => {
     const mod = await import('../base-path')
     expect(mod.withBasePath('/api/projects')).toBe('/punt/api/projects')
-    expect(mod.assetUrl('/uploads/a.webp')).toBe('/punt/uploads/a.webp')
+    expect(mod.assetUrl('/uploads/a.webp')).toBe('/punt/api/uploads/a.webp')
   })
 
   it('apiFetch prepends the basePath to relative paths', async () => {

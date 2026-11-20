@@ -38,8 +38,21 @@ export const basePath: string = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
  * withBasePath('/api/projects') // => "/api/projects"
  */
 export function withBasePath(path: string): string {
-  if (!basePath) return path
-  return `${basePath}${path}`
+  // Files written into public/ after a production build are not reliably
+  // served by Next.js' static public-file handler. Route uploaded files through
+  // the runtime file endpoint instead, while keeping their database URLs stable.
+  const servedPath = path.startsWith('/uploads/')
+    ? `/api/uploads/${path
+        .slice('/uploads/'.length)
+        .split('/')
+        .map(encodeURIComponent)
+        .join('/')}`
+    : path
+
+  if (!basePath || /^[a-z][a-z\d+.-]*:\/\//i.test(servedPath) || servedPath.startsWith('//')) {
+    return servedPath
+  }
+  return `${basePath}${servedPath}`
 }
 
 /**
@@ -48,7 +61,7 @@ export function withBasePath(path: string): string {
  *
  * @example
  * // With NEXT_PUBLIC_BASE_PATH="/punt"
- * assetUrl('/uploads/avatars/foo.webp') // => "/punt/uploads/avatars/foo.webp"
+ * assetUrl('/uploads/avatars/foo.webp') // => "/punt/api/uploads/avatars/foo.webp"
  * assetUrl(null)                         // => undefined
  * assetUrl(undefined)                    // => undefined
  */
